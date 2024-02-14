@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { sql } from '@vercel/postgres';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 
 const FormSchema = z.object({
     id: z.string(),
@@ -26,10 +27,21 @@ const FormSchema = z.object({
     const amountInCents = amount * 100;
     const date = new Date().toISOString().split('T')[0];
    
-    await sql`
-      INSERT INTO invoices (customer_id, amount, status, date)
-      VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
-    `;
+    console.log(amount)
+    console.log(amountInCents)
+
+    try {
+      await sql`
+        INSERT INTO invoices (customer_id, amount, status, date)
+        VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
+      `;
+    } catch (error) {
+      console.log('error', error);
+      throw new Error('Failed to Create Invoice');
+      return {
+        message: 'Database Error: Failed to Create Invoice.',
+      };
+    }
    
     revalidatePath('/dashboard/invoices');
     redirect('/dashboard/invoices');
@@ -42,21 +54,44 @@ const FormSchema = z.object({
       status: formData.get('status'),
     });
    
+    // const n = 34.45
+    // const temp = n * 100;
+    // console.log(n)
+    // console.log(temp)
+    // const amountInCents = (temp * 100) / 100
+    // console.log(amountInCents)
+  
     const amountInCents = amount * 100;
+   
     console.log(amount)
     console.log(amountInCents)
 
-    await sql`
-      UPDATE invoices
-      SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
-      WHERE id = ${id}
-    `;
+
+    try {
+      await sql`
+          UPDATE invoices
+          SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
+          WHERE id = ${id}
+        `;
+    } catch (error) {
+      console.log('error', error);
+      throw new Error('Failed to Update Invoice');
+      return { message: 'Database Error: Failed to Update Invoice.' };
+    }
    
     revalidatePath('/dashboard/invoices');
     redirect('/dashboard/invoices');
   }
 
   export async function deleteInvoice(id: string) {
-    await sql`DELETE FROM invoices WHERE id = ${id}`;
-    revalidatePath('/dashboard/invoices');
+    //throw new Error('Failed to Delete Invoice');
+ 
+  // Unreachable code block
+    try {
+      await sql`DELETE FROM invoices WHERE id = ${id}`;
+      revalidatePath('/dashboard/invoices');
+      return { message: 'Deleted Invoice.' };
+    } catch (error) {
+      return { message: 'Database Error: Failed to Delete Invoice.' };
+    }
   }
